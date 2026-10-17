@@ -8720,6 +8720,14 @@ MTLD3D9Device::PackDrawConstants(
   ps_b_blob[0] = ps_b_bits;
   {
     DWORD fog_c = pod.render_states->v[D3DRS_FOGCOLOR];
+    // MADEIRA diag: DXMT_D9_DIAG_FOGCOLOR=RRGGBB paints every fogged draw
+    // with a fixed colour, to tell fog-colour flashes from other causes.
+    static const DWORD diag_fog = [] {
+      auto v = env::getEnvVar("DXMT_D9_DIAG_FOGCOLOR");
+      return v.empty() ? 0u : (DWORD)std::strtoul(v.c_str(), nullptr, 16) | 0x80000000u;
+    }();
+    if (diag_fog)
+      fog_c = (fog_c & 0xFF000000u) | (diag_fog & 0x00FFFFFFu);
     float *fc = reinterpret_cast<float *>(&ps_b_blob[4]);
     fc[0] = static_cast<float>((fog_c >> 16) & 0xFF) / 255.0f;
     fc[1] = static_cast<float>((fog_c >> 8) & 0xFF) / 255.0f;
@@ -9663,6 +9671,23 @@ MTLD3D9Device::ResolveClusterState(
       fog_mode = DXSO_PS_FOG_MODE_SPECULAR_ALPHA;
     }
   }
+  // MADEIRA diag: DXMT_D9_DIAG_NOFOG=1 drops fog from every draw;
+  // DXMT_D9_DIAG_NOSPECFOG=1 drops only the specular-alpha fallback.
+  {
+    static const bool diag_nofog = env::getEnvVar("DXMT_D9_DIAG_NOFOG") == "1";
+    static const bool diag_nospecfog = env::getEnvVar("DXMT_D9_DIAG_NOSPECFOG") == "1";
+    static const bool diag_fogmode = env::getEnvVar("DXMT_D9_DIAG_FOGMODE") == "1";
+    if (diag_fogmode) {
+      static uint32_t hist[6];
+      static uint32_t n;
+      hist[fog_mode + 1]++;
+      if (!(++n & 0xFFF))
+        Logger::warn(str::format("[diag-fog] none=", hist[0], " vertex=", hist[1], " linear=", hist[2],
+                                 " exp=", hist[3], " exp2=", hist[4], " specular-alpha=", hist[5]));
+    }
+    if (diag_nofog || (diag_nospecfog && fog_mode == DXSO_PS_FOG_MODE_SPECULAR_ALPHA))
+      fog_mode = -1;
+  }
   // Dual-source blending: only when the active blend factors actually
   // read SRC1 (D3DBLEND_SRCCOLOR2 / INVSRCCOLOR2) does oC1 become the
   // second color index of attachment 0. A draw that writes oC1 as a
@@ -9970,7 +9995,8 @@ MTLD3D9Device::ResolveClusterState(
   // module cache applies (a 64-bit hit alone would pick the wrong
   // pipeline); the verify is a handful of int compares and rejects on
   // the first differing field.
-  if (pso_key == resolve_cache.last_pso_key && resolve_cache.last_pso_task &&
+  static const bool diag_no_cluster = env::getEnvVar("DXMT_D9_NO_CLUSTER_CACHE") == "1";
+  if (!diag_no_cluster && pso_key == resolve_cache.last_pso_key && resolve_cache.last_pso_task &&
       resolve_cache.last_pso_task->matchesKeyInputs(vs_fn, ps_fn, pso_info)) {
     task = resolve_cache.last_pso_task;
   } else if (auto it = m_psoCache.find(pso_key);
@@ -10292,7 +10318,8 @@ MTLD3D9Device::ResolveBatchedDrawForChunk(
   bool up_vb = bd.override_vb_buffer != 0;
   bool up_ib = bd.override_ib_buffer != 0;
   bool indexed = (bd.type == BatchedDraw::kIndexed);
-  bool cluster_hit = resolve_cache.pod_ptr == bd.pod_snapshot && resolve_cache.pod_ptr != nullptr &&
+  static const bool diag_no_cluster = env::getEnvVar("DXMT_D9_NO_CLUSTER_CACHE") == "1";
+  bool cluster_hit = !diag_no_cluster && resolve_cache.pod_ptr == bd.pod_snapshot && resolve_cache.pod_ptr != nullptr &&
                      resolve_cache.ref_gen == m_encodeSideRefsGen && resolve_cache.ref_gen != 0 &&
                      resolve_cache.up_vb == up_vb && resolve_cache.up_ib == up_ib &&
                      resolve_cache.up_ib_format == bd.override_ib_format &&
@@ -10507,7 +10534,8 @@ MTLD3D9Device::ResolveBatchedDrawForChunk(
     stage_length[slot] = entry.length;
     ++stage_i;
   }
-  bool vbuf_cache_hit = resolve_cache.last_vbuf_slot_mask == res.resolved_slot_mask;
+  static const bool diag_no_vbuf_cache = env::getEnvVar("DXMT_D9_NO_CLUSTER_CACHE") == "1";
+  bool vbuf_cache_hit = !diag_no_vbuf_cache && resolve_cache.last_vbuf_slot_mask == res.resolved_slot_mask;
   if (vbuf_cache_hit) {
     for (uint32_t slot = 0; slot < D3D9_MAX_VERTEX_STREAMS; ++slot) {
       if (!(res.resolved_slot_mask & (1u << slot)))
@@ -10629,7 +10657,8 @@ MTLD3D9Device::ResolveBatchedDrawForChunk(
   for (int i = 0; i < 8; ++i)
     ffp_tcw_key |= (ffp_texcoord_width[i] & 0xFu) << (i * 4);
   const bool ds_bound = res.resolved_ds_handle != 0;
-  if (bd.pod_snapshot == const_cache.pod_ptr && const_cache.pod_ptr != nullptr &&
+  static const bool diag_no_const_cache = env::getEnvVar("DXMT_D9_NO_CLUSTER_CACHE") == "1";
+  if (!diag_no_const_cache && bd.pod_snapshot == const_cache.pod_ptr && const_cache.pod_ptr != nullptr &&
       const_cache.vs_defs_key == vs_defs_key && const_cache.ps_defs_key == ps_defs_key &&
       const_cache.ffp_texcoord_width_key == ffp_tcw_key && const_cache.ds_bound == ds_bound &&
       const_cache.pos_transformed == res.resolved_position_transformed) {
