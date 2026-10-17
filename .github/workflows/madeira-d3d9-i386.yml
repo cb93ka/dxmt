@@ -1,0 +1,92 @@
+name: Madeira i386 D3D9 frontend
+
+# Builds only the i386 D3D9 frontend (d3d9-emulated.dll) for Madeira 0.1.3,
+# which pins this DXMT tree at 35a4db11. Madeira's d3d9 shim loads
+# d3d9-emulated.dll with LoadLibraryA, so a copy next to the game's .exe
+# replaces the bundled one without rebuilding the app.
+
+on:
+  push:
+    branches:
+    - madeira-0.1.3-fix
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Toolchains
+        run: |
+          set -euo pipefail
+          mkdir -p toolchains
+          # llvm-mingw as pinned by Madeira's docs/BUILDING.md
+          curl -sSL -o llvm-mingw.tar.xz https://github.com/mstorsjo/llvm-mingw/releases/download/20260421/llvm-mingw-20260421-ucrt-macos-universal.tar.xz
+          echo "bd85a3975723815cef28dbbd2ca2cb0c926f6b348a12a0453f39f7af273cb3f7  llvm-mingw.tar.xz" | shasum -a 256 -c -
+          tar -xf llvm-mingw.tar.xz -C toolchains
+          rm llvm-mingw.tar.xz
+          # Wine import libraries and winebuild for winemetal (same source as configure.sh)
+          curl -sSL -o wine.tar.gz https://github.com/3Shain/wine/releases/download/v8.16-3shain/wine.tar.gz
+          mkdir -p toolchains/wine
+          tar -xzf wine.tar.gz -C toolchains/wine
+          rm wine.tar.gz
+          ls toolchains/wine/lib/wine
+          pip3 install meson==1.10.0 --break-system-packages
+          brew install ninja || true
+
+      - name: Configure
+        run: |
+          set -euo pipefail
+          TC="$PWD/toolchains/llvm-mingw-20260421-ucrt-macos-universal/bin"
+          cat > cross-i386.txt <<EOT
+          [binaries]
+          c = '$TC/i686-w64-mingw32-clang'
+          cpp = '$TC/i686-w64-mingw32-clang++'
+          ar = '$TC/i686-w64-mingw32-ar'
+          strip = '$TC/i686-w64-mingw32-strip'
+          windres = '$TC/i686-w64-mingw32-windres'
+          dlltool = '$TC/i686-w64-mingw32-dlltool'
+
+          [properties]
+          needs_exe_wrapper = true
+
+          [host_machine]
+          system = 'windows'
+          cpu_family = 'x86'
+          cpu = 'i686'
+          endian = 'little'
+          EOT
+          sed -i '' 's/^ *//' cross-i386.txt
+          meson setup --cross-file cross-i386.txt --native-file build-osx.txt --buildtype release \
+            -Dwine_install_path=toolchains/wine -Dwine_builtin_dll=true build-pe-i386
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          ninja -C build-pe-i386 src/d3d9/d3d9.dll
+          mkdir -p out
+          toolchains/llvm-mingw-20260421-ucrt-macos-universal/bin/i686-w64-mingw32-strip \
+            -o out/d3d9-emulated.dll build-pe-i386/src/d3d9/d3d9.dll
+          ls -l out
+          shasum -a 256 out/d3d9-emulated.dll
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: d3d9-emulated
+          path: out/d3d9-emulated.dll
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="d3d9-${GITHUB_SHA::7}-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" out/d3d9-emulated.dll --target "$GITHUB_SHA" \
+            --title "$TAG" --notes "i386 d3d9-emulated.dll for Madeira 0.1.3 (DXMT ${GITHUB_SHA::7})"
