@@ -9097,6 +9097,13 @@ MTLD3D9Device::PackDrawConstants(
     return false;
   const uint64_t base_off = span.offset;
   char *base = static_cast<char *>(span.host);
+  {
+    // MADEIRA diag: zero the block under DXMT_D9_CACHE_VERIFY so bytes no
+    // section writes (e.g. light slots past the light count) compare equal.
+    static const bool diag_verify = env::getEnvVar("DXMT_D9_CACHE_VERIFY") == "1";
+    if (diag_verify)
+      std::memset(base, 0, total);
+  }
   // A fixed-function VS reads the ffp_uniforms block through the same
   // buffer(0) binding the register file uses; the world*view*projection
   // rows land at the sub-buffer head and the rest of the slot is inert.
@@ -10897,13 +10904,19 @@ MTLD3D9Device::ResolveBatchedDrawForChunk(
         bool was_corrupt = std::memcmp(const_cache.diag_copy.data(), const_cache.diag_host, const_cache.diag_total) != 0;
         int sem_sub = -1;
         size_t sem_byte = 0;
-        for (uint32_t i = 0; i < 10 && sem_sub < 0; ++i) {
+        uint32_t sub_mask = 0;
+        size_t first_byte[10] = {};
+        for (uint32_t i = 0; i < 10; ++i) {
           size_t a = const_cache.diag_sub_off[i];
           size_t b = (i + 1 < 10) ? const_cache.diag_sub_off[i + 1] : total;
           for (size_t k = a; k < b && k < total; ++k)
             if (const_cache.diag_copy[k] != fresh_cache.diag_copy[k]) {
-              sem_sub = static_cast<int>(i);
-              sem_byte = k - a;
+              if (sem_sub < 0) {
+                sem_sub = static_cast<int>(i);
+                sem_byte = k - a;
+              }
+              sub_mask |= 1u << i;
+              first_byte[i] = k - a;
               break;
             }
         }
@@ -10916,8 +10929,10 @@ MTLD3D9Device::ResolveBatchedDrawForChunk(
           uint32_t c = semantic.fetch_add(1) + 1;
           if (c <= 60 || !(c & (c - 1)))
             Logger::warn(str::format("[diag-cache] const STALE #", c, " of ", n, " hits: sub=", sem_sub,
-                                     " byte=", sem_byte, " total=", const_cache.diag_total, "/", fresh_cache.diag_total,
-                                     " ffp_vs=", ffp_vs, " ffp_ps=", ffp_ps));
+                                     " byte=", sem_byte, " mask=", sub_mask, " b0=", first_byte[0], " b3=", first_byte[3],
+                                     " b5=", first_byte[5], " total=", const_cache.diag_total, "/", fresh_cache.diag_total,
+                                     " ffp_vs=", ffp_vs, " ffp_ps=", ffp_ps,
+                                     " lights=", bd.pod_snapshot->ffp_light_count));
         }
         if (!(n & 0x3FFF))
           Logger::warn(str::format("[diag-cache] const hits=", n, " corrupt=", corrupt.load(), " stale=", semantic.load()));
