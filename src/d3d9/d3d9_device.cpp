@@ -9097,11 +9097,15 @@ MTLD3D9Device::PackDrawConstants(
     return false;
   const uint64_t base_off = span.offset;
   char *base = static_cast<char *>(span.host);
+  // MADEIRA: start every packed block from zeros. Not every byte is written
+  // below (light slots past the enabled count, the padding after the fog
+  // params, registers above the app's high-water mark), and a generated shader
+  // can still read them; the ring hands back whatever an earlier draw left
+  // there, which showed up as objects flashing purple in Postal 2 (D3D8 via
+  // d3d8to9). DXMT_D9_NO_CONST_ZERO=1 restores the old behaviour.
   {
-    // MADEIRA diag: zero the block under DXMT_D9_CACHE_VERIFY so bytes no
-    // section writes (e.g. light slots past the light count) compare equal.
-    static const bool diag_verify = env::getEnvVar("DXMT_D9_CACHE_VERIFY") == "1";
-    if (diag_verify)
+    static const bool no_zero = env::getEnvVar("DXMT_D9_NO_CONST_ZERO") == "1";
+    if (!no_zero)
       std::memset(base, 0, total);
   }
   // A fixed-function VS reads the ffp_uniforms block through the same
