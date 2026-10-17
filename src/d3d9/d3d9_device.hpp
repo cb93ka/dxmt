@@ -1207,6 +1207,12 @@ private:
     bool ds_bound = false;
     bool pos_transformed = false;
     std::array<D9ResolvedDraw::ResolvedConstUpload, 10> uploads = {};
+    // MADEIRA diag (DXMT_D9_CACHE_VERIFY): where the cached bytes live, the
+    // sub-buffer layout, and a private copy taken right after packing.
+    const char *diag_host = nullptr;
+    size_t diag_total = 0;
+    size_t diag_sub_off[10] = {};
+    std::vector<char> diag_copy;
   };
   // Cluster cache for the cluster-stable resolved bundle (PSO, DSSO,
   // sampler+texture views, RT/DS resolve, viewport/scissor, IA layout
@@ -1286,6 +1292,11 @@ private:
     uint32_t last_vbuf_length[D3D9_MAX_VERTEX_STREAMS] = {};
     obj_handle_t last_vbuf_table_buffer = 0;
     uint64_t last_vbuf_table_offset = 0;
+    // MADEIRA diag (DXMT_D9_CACHE_VERIFY): host view and private copy of the
+    // cached vbuf table.
+    const char *diag_vbuf_host = nullptr;
+    size_t diag_vbuf_bytes = 0;
+    char diag_vbuf_copy[16 * 16] = {};
   };
   bool ResolveBatchedDrawForChunk(
       BatchedDraw &bd, D9ResolvedDraw &res, uint64_t chunk_seq, uint64_t chunk_coherent_id,

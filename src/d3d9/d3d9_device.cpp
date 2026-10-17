@@ -9313,6 +9313,15 @@ MTLD3D9Device::PackDrawConstants(
   const_cache.ds_bound = ds_bound;
   const_cache.pos_transformed = res.resolved_position_transformed;
   const_cache.uploads = res.resolved_const_uploads;
+  {
+    static const bool diag_verify = env::getEnvVar("DXMT_D9_CACHE_VERIFY") == "1";
+    if (diag_verify) {
+      const_cache.diag_host = base;
+      const_cache.diag_total = total;
+      std::memcpy(const_cache.diag_sub_off, sub_off, sizeof(sub_off));
+      const_cache.diag_copy.assign(base, base + total);
+    }
+  }
   return true;
 }
 
@@ -10734,6 +10743,24 @@ MTLD3D9Device::ResolveBatchedDrawForChunk(
   if (vbuf_cache_hit) {
     res.resolved_vbuf_table_buffer = resolve_cache.last_vbuf_table_buffer;
     res.resolved_vbuf_table_offset = resolve_cache.last_vbuf_table_offset;
+    static const bool diag_verify = env::getEnvVar("DXMT_D9_CACHE_VERIFY") == "1";
+    if (diag_verify && resolve_cache.diag_vbuf_host) {
+      static std::atomic<uint32_t> hits{0}, corrupt{0}, semantic{0};
+      const uint32_t n = hits.fetch_add(1) + 1;
+      const size_t bytes = sizeof(VbufEntry) * num_active;
+      if (std::memcmp(resolve_cache.diag_vbuf_copy, resolve_cache.diag_vbuf_host, resolve_cache.diag_vbuf_bytes) != 0) {
+        uint32_t c = corrupt.fetch_add(1) + 1;
+        if (c <= 40 || !(c & (c - 1)))
+          Logger::warn(str::format("[diag-cache] vbuf CORRUPT #", c, " of ", n, " hits"));
+      }
+      if (bytes != resolve_cache.diag_vbuf_bytes || std::memcmp(resolve_cache.diag_vbuf_copy, stage, bytes) != 0) {
+        uint32_t c = semantic.fetch_add(1) + 1;
+        if (c <= 40 || !(c & (c - 1)))
+          Logger::warn(str::format("[diag-cache] vbuf STALE #", c, " of ", n, " hits, active=", num_active));
+      }
+      if (!(n & 0x3FFF))
+        Logger::warn(str::format("[diag-cache] vbuf hits=", n, " corrupt=", corrupt.load(), " stale=", semantic.load()));
+    }
   } else {
     auto vbuf_span =
         tryRingAllocate(m_constRingResolve, chunk_seq, chunk_coherent_id, sizeof(VbufEntry) * num_active, 256);
@@ -10750,6 +10777,9 @@ MTLD3D9Device::ResolveBatchedDrawForChunk(
     }
     resolve_cache.last_vbuf_table_buffer = res.resolved_vbuf_table_buffer;
     resolve_cache.last_vbuf_table_offset = res.resolved_vbuf_table_offset;
+    resolve_cache.diag_vbuf_host = static_cast<const char *>(vbuf_span.host);
+    resolve_cache.diag_vbuf_bytes = sizeof(VbufEntry) * num_active;
+    std::memcpy(resolve_cache.diag_vbuf_copy, vbuf_span.host, sizeof(VbufEntry) * num_active);
   }
 
   // ---- VS-resident handles per active stream ----
@@ -10847,6 +10877,52 @@ MTLD3D9Device::ResolveBatchedDrawForChunk(
       const_cache.ffp_texcoord_width_key == ffp_tcw_key && const_cache.ds_bound == ds_bound &&
       const_cache.pos_transformed == res.resolved_position_transformed) {
     res.resolved_const_uploads = const_cache.uploads;
+    static const bool diag_verify = env::getEnvVar("DXMT_D9_CACHE_VERIFY") == "1";
+    if (diag_verify && const_cache.diag_host) {
+      // Re-pack into a scratch cache and compare three ways: the private copy
+      // taken at pack time, the cached ring bytes as they are now, and a fresh
+      // pack for this draw.
+      ConstUploadCache fresh_cache;
+      D9ResolvedDraw fresh_res = res;
+      if (PackDrawConstants(
+              bd, fresh_res, fresh_cache,
+              DrawShaderShape{
+                  vs, ps, ffp_vs, ffp_ps, vs_uses_relative, ps_uses_relative, vs_needs_defs, ps_needs_defs
+              },
+              ffp_texcoord_width, ffp_tcw_key, ds_bound, vs_defs_key, ps_defs_key, chunk_seq, chunk_coherent_id
+          ) && fresh_cache.diag_host) {
+        static std::atomic<uint32_t> hits{0}, corrupt{0}, semantic{0};
+        const uint32_t n = hits.fetch_add(1) + 1;
+        const size_t total = std::min(const_cache.diag_total, fresh_cache.diag_total);
+        bool was_corrupt = std::memcmp(const_cache.diag_copy.data(), const_cache.diag_host, const_cache.diag_total) != 0;
+        int sem_sub = -1;
+        size_t sem_byte = 0;
+        for (uint32_t i = 0; i < 10 && sem_sub < 0; ++i) {
+          size_t a = const_cache.diag_sub_off[i];
+          size_t b = (i + 1 < 10) ? const_cache.diag_sub_off[i + 1] : total;
+          for (size_t k = a; k < b && k < total; ++k)
+            if (const_cache.diag_copy[k] != fresh_cache.diag_copy[k]) {
+              sem_sub = static_cast<int>(i);
+              sem_byte = k - a;
+              break;
+            }
+        }
+        if (was_corrupt) {
+          uint32_t c = corrupt.fetch_add(1) + 1;
+          if (c <= 40 || !(c & (c - 1)))
+            Logger::warn(str::format("[diag-cache] const CORRUPT #", c, " of ", n, " hits (ring bytes changed after packing)"));
+        }
+        if (sem_sub >= 0 || const_cache.diag_total != fresh_cache.diag_total) {
+          uint32_t c = semantic.fetch_add(1) + 1;
+          if (c <= 60 || !(c & (c - 1)))
+            Logger::warn(str::format("[diag-cache] const STALE #", c, " of ", n, " hits: sub=", sem_sub,
+                                     " byte=", sem_byte, " total=", const_cache.diag_total, "/", fresh_cache.diag_total,
+                                     " ffp_vs=", ffp_vs, " ffp_ps=", ffp_ps));
+        }
+        if (!(n & 0x3FFF))
+          Logger::warn(str::format("[diag-cache] const hits=", n, " corrupt=", corrupt.load(), " stale=", semantic.load()));
+      }
+    }
   } else if (!PackDrawConstants(
                  bd, res, const_cache,
                  DrawShaderShape{
