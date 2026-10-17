@@ -10172,7 +10172,8 @@ MTLD3D9Device::ResolveClusterState(
   // module cache applies (a 64-bit hit alone would pick the wrong
   // pipeline); the verify is a handful of int compares and rejects on
   // the first differing field.
-  static const bool diag_no_cluster = env::getEnvVar("DXMT_D9_NO_CLUSTER_CACHE") == "1";
+  static const bool diag_no_cluster = env::getEnvVar("DXMT_D9_NO_CLUSTER_CACHE") == "1" ||
+                                     env::getEnvVar("DXMT_D9_NO_PSO_FASTPATH") == "1";
   if (!diag_no_cluster && pso_key == resolve_cache.last_pso_key && resolve_cache.last_pso_task &&
       resolve_cache.last_pso_task->matchesKeyInputs(vs_fn, ps_fn, pso_info)) {
     task = resolve_cache.last_pso_task;
@@ -10495,7 +10496,8 @@ MTLD3D9Device::ResolveBatchedDrawForChunk(
   bool up_vb = bd.override_vb_buffer != 0;
   bool up_ib = bd.override_ib_buffer != 0;
   bool indexed = (bd.type == BatchedDraw::kIndexed);
-  static const bool diag_no_cluster = env::getEnvVar("DXMT_D9_NO_CLUSTER_CACHE") == "1";
+  static const bool diag_no_cluster = env::getEnvVar("DXMT_D9_NO_CLUSTER_CACHE") == "1" ||
+                                     env::getEnvVar("DXMT_D9_NO_RESOLVE_CACHE") == "1";
   bool cluster_hit = !diag_no_cluster && resolve_cache.pod_ptr == bd.pod_snapshot && resolve_cache.pod_ptr != nullptr &&
                      resolve_cache.ref_gen == m_encodeSideRefsGen && resolve_cache.ref_gen != 0 &&
                      resolve_cache.up_vb == up_vb && resolve_cache.up_ib == up_ib &&
@@ -10711,7 +10713,8 @@ MTLD3D9Device::ResolveBatchedDrawForChunk(
     stage_length[slot] = entry.length;
     ++stage_i;
   }
-  static const bool diag_no_vbuf_cache = env::getEnvVar("DXMT_D9_NO_CLUSTER_CACHE") == "1";
+  static const bool diag_no_vbuf_cache = env::getEnvVar("DXMT_D9_NO_CLUSTER_CACHE") == "1" ||
+                                         env::getEnvVar("DXMT_D9_NO_VBUF_CACHE") == "1";
   bool vbuf_cache_hit = !diag_no_vbuf_cache && resolve_cache.last_vbuf_slot_mask == res.resolved_slot_mask;
   if (vbuf_cache_hit) {
     for (uint32_t slot = 0; slot < D3D9_MAX_VERTEX_STREAMS; ++slot) {
@@ -10834,7 +10837,8 @@ MTLD3D9Device::ResolveBatchedDrawForChunk(
   for (int i = 0; i < 8; ++i)
     ffp_tcw_key |= (ffp_texcoord_width[i] & 0xFu) << (i * 4);
   const bool ds_bound = res.resolved_ds_handle != 0;
-  static const bool diag_no_const_cache = env::getEnvVar("DXMT_D9_NO_CLUSTER_CACHE") == "1";
+  static const bool diag_no_const_cache = env::getEnvVar("DXMT_D9_NO_CLUSTER_CACHE") == "1" ||
+                                          env::getEnvVar("DXMT_D9_NO_CONST_CACHE") == "1";
   if (!diag_no_const_cache && bd.pod_snapshot == const_cache.pod_ptr && const_cache.pod_ptr != nullptr &&
       const_cache.vs_defs_key == vs_defs_key && const_cache.ps_defs_key == ps_defs_key &&
       const_cache.ffp_texcoord_width_key == ffp_tcw_key && const_cache.ds_bound == ds_bound &&
