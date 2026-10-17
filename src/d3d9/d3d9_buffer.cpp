@@ -8,6 +8,7 @@
 #include "wsi_platform.hpp"
 
 #include "d3d9_census.hpp"
+#include "d3d9_diag_hr.hpp"
 
 namespace dxmt {
 
@@ -227,9 +228,13 @@ MTLD3D9VertexBuffer::GetDevice(IDirect3DDevice9 **ppDevice) {
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9VertexBuffer::SetPrivateData(REFGUID refguid, const void *pData, DWORD SizeOfData, DWORD Flags) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9VertexBuffer_SetPrivateData);
   D9DeviceLock lock = m_device->LockDevice();
   return D3D9SetPrivateData(m_privateData, refguid, pData, SizeOfData, Flags);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9VertexBuffer::SetPrivateData", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -241,9 +246,13 @@ MTLD3D9VertexBuffer::GetPrivateData(REFGUID refguid, void *pData, DWORD *pSizeOf
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9VertexBuffer::FreePrivateData(REFGUID refguid) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9VertexBuffer_FreePrivateData);
   D9DeviceLock lock = m_device->LockDevice();
   return D3D9FreePrivateData(m_privateData, refguid);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9VertexBuffer::FreePrivateData", diag_hr_);
+  return diag_hr_;
 }
 
 DWORD STDMETHODCALLTYPE
@@ -276,6 +285,7 @@ MTLD3D9VertexBuffer::GetType() {
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9VertexBuffer::Lock(UINT OffsetToLock, UINT SizeToLock, void **ppbData, DWORD Flags) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9VertexBuffer_Lock);
   census::lockBytes(SizeToLock);
   D9DeviceLock lock = m_device->LockDevice();
@@ -306,10 +316,14 @@ MTLD3D9VertexBuffer::Lock(UINT OffsetToLock, UINT SizeToLock, void **ppbData, DW
   m_lockCount.increment();
   *ppbData = static_cast<char *>(m_hostPtr) + OffsetToLock;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9VertexBuffer::Lock", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9VertexBuffer::Unlock() {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9VertexBuffer_Unlock);
   D9DeviceLock lock = m_device->LockDevice();
   // Nothing uploads here, for any pool. The draw that reads the buffer
@@ -319,6 +333,9 @@ MTLD3D9VertexBuffer::Unlock() {
   if (m_lockCount.decrement() == 0)
     m_writeLocked = false;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9VertexBuffer::Unlock", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -471,9 +488,13 @@ MTLD3D9IndexBuffer::GetDevice(IDirect3DDevice9 **ppDevice) {
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9IndexBuffer::SetPrivateData(REFGUID refguid, const void *pData, DWORD SizeOfData, DWORD Flags) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9IndexBuffer_SetPrivateData);
   D9DeviceLock lock = m_device->LockDevice();
   return D3D9SetPrivateData(m_privateData, refguid, pData, SizeOfData, Flags);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9IndexBuffer::SetPrivateData", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -485,9 +506,13 @@ MTLD3D9IndexBuffer::GetPrivateData(REFGUID refguid, void *pData, DWORD *pSizeOfD
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9IndexBuffer::FreePrivateData(REFGUID refguid) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9IndexBuffer_FreePrivateData);
   D9DeviceLock lock = m_device->LockDevice();
   return D3D9FreePrivateData(m_privateData, refguid);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9IndexBuffer::FreePrivateData", diag_hr_);
+  return diag_hr_;
 }
 
 DWORD STDMETHODCALLTYPE
@@ -520,6 +545,7 @@ MTLD3D9IndexBuffer::GetType() {
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9IndexBuffer::Lock(UINT OffsetToLock, UINT SizeToLock, void **ppbData, DWORD Flags) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9IndexBuffer_Lock);
   census::lockBytes(SizeToLock);
   D9DeviceLock lock = m_device->LockDevice();
@@ -543,16 +569,23 @@ MTLD3D9IndexBuffer::Lock(UINT OffsetToLock, UINT SizeToLock, void **ppbData, DWO
   m_lockCount.increment();
   *ppbData = static_cast<char *>(m_hostPtr) + OffsetToLock;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9IndexBuffer::Lock", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9IndexBuffer::Unlock() {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9IndexBuffer_Unlock);
   D9DeviceLock lock = m_device->LockDevice();
   // See MTLD3D9VertexBuffer::Unlock: the draw refreshes, not this.
   if (m_lockCount.decrement() == 0)
     m_writeLocked = false;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9IndexBuffer::Unlock", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE

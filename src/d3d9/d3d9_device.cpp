@@ -58,6 +58,7 @@
 #include "com/com_pointer.hpp"
 
 #include "d3d9_census.hpp"
+#include "d3d9_diag_hr.hpp"
 
 namespace dxmt {
 
@@ -1952,6 +1953,7 @@ MTLD3D9Device::GetCreationParameters(D3DDEVICE_CREATION_PARAMETERS *pParameters)
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetCursorProperties(UINT XHotSpot, UINT YHotSpot, IDirect3DSurface9 *pCursorBitmap) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetCursorProperties);
   D9DeviceLock lock = LockDevice();
   // Validation gates per DXVK d3d9_device.cpp, then the wined3d
@@ -2017,6 +2019,9 @@ MTLD3D9Device::SetCursorProperties(UINT XHotSpot, UINT YHotSpot, IDirect3DSurfac
 #endif
   m_cursorImageSet = true;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetCursorProperties", diag_hr_);
+  return diag_hr_;
 }
 void STDMETHODCALLTYPE
 MTLD3D9Device::SetCursorPosition(int X, int Y, DWORD Flags) {
@@ -2062,6 +2067,7 @@ HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreateAdditionalSwapChain(
     D3DPRESENT_PARAMETERS *pPresentationParameters, IDirect3DSwapChain9 **ppSwapChain
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateAdditionalSwapChain);
   D9DeviceLock lock = LockDevice();
   if (ppSwapChain)
@@ -2110,6 +2116,9 @@ MTLD3D9Device::CreateAdditionalSwapChain(
   // app's final Release destroys it.
   *ppSwapChain = ::dxmt::ref(static_cast<IDirect3DSwapChain9 *>(chain));
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateAdditionalSwapChain", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::GetSwapChain(UINT iSwapChain, IDirect3DSwapChain9 **pSwapChain) {
@@ -2566,6 +2575,7 @@ MTLD3D9Device::unhookFocusWindowProc() {
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::Reset(D3DPRESENT_PARAMETERS *pPresentationParameters) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_Reset);
   D9DeviceLock lock = LockDevice();
   // Wine's main thread has no outer NSAutoreleasePool. Reset tears
@@ -2766,6 +2776,9 @@ MTLD3D9Device::Reset(D3DPRESENT_PARAMETERS *pPresentationParameters) {
   m_fullscreenOccluded.store(false, std::memory_order_relaxed);
   m_lastForegroundSample.store(wsi::foregroundWindow(), std::memory_order_relaxed);
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::Reset", diag_hr_);
+  return diag_hr_;
 }
 
 void
@@ -2875,6 +2888,7 @@ HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::Present(
     const RECT *pSourceRect, const RECT *pDestRect, HWND hDestWindowOverride, const RGNDATA *pDirtyRegion
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_Present);
   D9DeviceLock lock = LockDevice();
   // An Ex device presenting an unfocused fullscreen chain reports
@@ -2886,6 +2900,9 @@ MTLD3D9Device::Present(
   updateNonExLostState();
   HRESULT hr = m_implicitSwapChain->Present(pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion, 0);
   return hr;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::Present", diag_hr_);
+  return diag_hr_;
 }
 
 // Device-level GetBackBuffer is a thin forwarder to the chain identified
@@ -2920,6 +2937,7 @@ MTLD3D9Device::GetRasterStatus(UINT iSwapChain, D3DRASTER_STATUS *pRasterStatus)
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetDialogBoxMode(BOOL bEnableDialogs) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetDialogBoxMode);
   D9DeviceLock lock = LockDevice();
   // MSDN documents many error conditions; DXVK's note
@@ -2930,6 +2948,9 @@ MTLD3D9Device::SetDialogBoxMode(BOOL bEnableDialogs) {
   // Win32-only).
   (void)bEnableDialogs;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetDialogBoxMode", diag_hr_);
+  return diag_hr_;
 }
 void STDMETHODCALLTYPE
 MTLD3D9Device::SetGammaRamp(UINT iSwapChain, DWORD Flags, const D3DGAMMARAMP *pRamp) {
@@ -2968,6 +2989,7 @@ MTLD3D9Device::CreateTexture(
     UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, IDirect3DTexture9 **ppTexture,
     HANDLE *pSharedHandle
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateTexture);
   D9DeviceLock lock = LockDevice();
   if (!ppTexture)
@@ -3217,12 +3239,16 @@ MTLD3D9Device::CreateTexture(
   tex->AddRef();
   *ppTexture = tex;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateTexture", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreateVolumeTexture(
     UINT Width, UINT Height, UINT Depth, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool,
     IDirect3DVolumeTexture9 **ppVolumeTexture, HANDLE *pSharedHandle
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateVolumeTexture);
   D9DeviceLock lock = LockDevice();
   if (!ppVolumeTexture)
@@ -3330,6 +3356,9 @@ MTLD3D9Device::CreateVolumeTexture(
   tex->AddRef();
   *ppVolumeTexture = tex;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateVolumeTexture", diag_hr_);
+  return diag_hr_;
 }
 
 // CreateCubeTexture: same validation as CreateTexture, one dimension (EdgeLength).
@@ -3339,6 +3368,7 @@ MTLD3D9Device::CreateCubeTexture(
     UINT EdgeLength, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, IDirect3DCubeTexture9 **ppCubeTexture,
     HANDLE *pSharedHandle
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateCubeTexture);
   D9DeviceLock lock = LockDevice();
   if (!ppCubeTexture)
@@ -3514,6 +3544,9 @@ MTLD3D9Device::CreateCubeTexture(
   tex->AddRef();
   *ppCubeTexture = tex;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateCubeTexture", diag_hr_);
+  return diag_hr_;
 }
 // Storage for a d3d9 vertex / index buffer; the buffer object wraps the
 // returned dxmt::Buffer in a dxmt::DynamicBuffer. A CPU-writable allocation the
@@ -3545,6 +3578,7 @@ HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreateVertexBuffer(
     UINT Length, DWORD Usage, DWORD FVF, D3DPOOL Pool, IDirect3DVertexBuffer9 **ppVertexBuffer, HANDLE *pSharedHandle
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateVertexBuffer);
   D9DeviceLock lock = LockDevice();
   if (!ppVertexBuffer)
@@ -3624,12 +3658,16 @@ MTLD3D9Device::CreateVertexBuffer(
   vb->AddRef();
   *ppVertexBuffer = vb;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateVertexBuffer", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreateIndexBuffer(
     UINT Length, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, IDirect3DIndexBuffer9 **ppIndexBuffer,
     HANDLE *pSharedHandle
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateIndexBuffer);
   D9DeviceLock lock = LockDevice();
   if (!ppIndexBuffer)
@@ -3698,12 +3736,16 @@ MTLD3D9Device::CreateIndexBuffer(
   ib->AddRef();
   *ppIndexBuffer = ib;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateIndexBuffer", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreateRenderTarget(
     UINT Width, UINT Height, D3DFORMAT Format, D3DMULTISAMPLE_TYPE MultiSample, DWORD MultisampleQuality, BOOL Lockable,
     IDirect3DSurface9 **ppSurface, HANDLE *pSharedHandle
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateRenderTarget);
   D9DeviceLock lock = LockDevice();
   if (!ppSurface)
@@ -3852,12 +3894,16 @@ MTLD3D9Device::CreateRenderTarget(
   surface->AddRef();
   *ppSurface = surface;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateRenderTarget", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreateDepthStencilSurface(
     UINT Width, UINT Height, D3DFORMAT Format, D3DMULTISAMPLE_TYPE MultiSample, DWORD MultisampleQuality, BOOL Discard,
     IDirect3DSurface9 **ppSurface, HANDLE *pSharedHandle
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateDepthStencilSurface);
   D9DeviceLock lock = LockDevice();
   if (!ppSurface)
@@ -3980,6 +4026,9 @@ MTLD3D9Device::CreateDepthStencilSurface(
   surface->AddRef();
   *ppSurface = surface;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateDepthStencilSurface", diag_hr_);
+  return diag_hr_;
 }
 // UpdateSurface: SYSTEMMEM -> DEFAULT blit. Symmetric inverse of
 // GetRenderTargetData. Validation per DXVK d3d9_device.cpp.
@@ -3988,6 +4037,7 @@ MTLD3D9Device::UpdateSurface(
     IDirect3DSurface9 *pSourceSurface, const RECT *pSourceRect, IDirect3DSurface9 *pDestinationSurface,
     const POINT *pDestPoint
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_UpdateSurface);
   D9DeviceLock lock = LockDevice();
   settleUploadPressure(); // ml1490, as in UpdateTexture
@@ -4148,6 +4198,9 @@ MTLD3D9Device::UpdateSurface(
   // materialised), so the staging path handles every legal case; there is
   // nothing to copy if it somehow has none.
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::UpdateSurface", diag_hr_);
+  return diag_hr_;
 }
 // UpdateTexture: SYSTEMMEM master -> DEFAULT mirror (push to GPU).
 // Validation: same type/format/level-0 dims, src_levels >= dst_levels.
@@ -4155,6 +4208,7 @@ MTLD3D9Device::UpdateSurface(
 // source or destination here (wined3d rejects them).
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::UpdateTexture(IDirect3DBaseTexture9 *pSourceTexture, IDirect3DBaseTexture9 *pDestinationTexture) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_UpdateTexture);
   D9DeviceLock lock = LockDevice();
   // Wine main thread has no outer NSAutoreleasePool; the upload path
@@ -4794,6 +4848,9 @@ MTLD3D9Device::UpdateTexture(IDirect3DBaseTexture9 *pSourceTexture, IDirect3DBas
       markAutogenMipsDirty();
     return D3D_OK;
   }
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::UpdateTexture", diag_hr_);
+  return diag_hr_;
 }
 // GetRenderTargetData: RT -> SYSTEMMEM blit. Validation per DXVK
 // d3d9_device.cpp, which forwards a DEFAULT-pool destination to StretchRect.
@@ -5198,8 +5255,12 @@ MTLD3D9Device::StretchRect(
     IDirect3DSurface9 *pSourceSurface, const RECT *pSourceRect, IDirect3DSurface9 *pDestSurface, const RECT *pDestRect,
     D3DTEXTUREFILTERTYPE Filter
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_StretchRect);
   return stretchRectImpl(pSourceSurface, pSourceRect, pDestSurface, pDestRect, Filter, /* from_readback */ false);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::StretchRect", diag_hr_);
+  return diag_hr_;
 }
 
 // GetRenderTargetData's DEFAULT-pool forward copies a render target into a plain
@@ -5452,6 +5513,7 @@ encode_bc_solid_block(D3DFORMAT format, D3DCOLOR color, uint8_t out[16]) {
 // sub-rect takes the scissored render-pass quad.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::ColorFill(IDirect3DSurface9 *pSurface, const RECT *pRect, D3DCOLOR Color) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_ColorFill);
   D9DeviceLock lock = LockDevice();
   // Wine main thread has no outer NSAutoreleasePool. Clear-encoder
@@ -5631,11 +5693,15 @@ MTLD3D9Device::ColorFill(IDirect3DSurface9 *pSurface, const RECT *pRect, D3DCOLO
   // so the standalone-surface / swapchain-backbuffer cases stay no-op.
   dst->flagContainerAutoGenDirty();
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::ColorFill", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreateOffscreenPlainSurface(
     UINT Width, UINT Height, D3DFORMAT Format, D3DPOOL Pool, IDirect3DSurface9 **ppSurface, HANDLE *pSharedHandle
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateOffscreenPlainSurface);
   D9DeviceLock lock = LockDevice();
   if (!ppSurface)
@@ -5936,9 +6002,13 @@ MTLD3D9Device::CreateOffscreenPlainSurface(
   surface->AddRef();
   *ppSurface = surface;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateOffscreenPlainSurface", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetRenderTarget(DWORD RenderTargetIndex, IDirect3DSurface9 *pRenderTarget) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetRenderTarget);
   D9DeviceLock lock = LockDevice();
   if (RenderTargetIndex >= D3D_MAX_SIMULTANEOUS_RENDERTARGETS)
@@ -6059,6 +6129,9 @@ MTLD3D9Device::SetRenderTarget(DWORD RenderTargetIndex, IDirect3DSurface9 *pRend
   if (need_scissor_op)
     m_encShadowDirty |= dxmt::D9ES_DIRTY_SCISSOR_RECT;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetRenderTarget", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -6088,6 +6161,7 @@ MTLD3D9Device::GetRenderTarget(DWORD RenderTargetIndex, IDirect3DSurface9 **ppRe
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetDepthStencilSurface(IDirect3DSurface9 *pNewZStencil) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetDepthStencilSurface);
   D9DeviceLock lock = LockDevice();
   // Unlike RT slot 0, depth-stencil is allowed to be NULL; depth-
@@ -6117,6 +6191,9 @@ MTLD3D9Device::SetDepthStencilSurface(IDirect3DSurface9 *pNewZStencil) {
     surface->AddRefPrivate();
   QueueRefOp(PendingRefOp::DepthStencilSurface, surface);
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetDepthStencilSurface", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -6139,16 +6216,21 @@ MTLD3D9Device::GetDepthStencilSurface(IDirect3DSurface9 **ppZStencilSurface) {
 // the recorded batch; Present and resource/query hazards still drain it.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::BeginScene() {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_BeginScene);
   D9DeviceLock lock = LockDevice();
   if (m_inScene)
     return D3DERR_INVALIDCALL;
   m_inScene = true;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::BeginScene", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::EndScene() {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_EndScene);
   D9DeviceLock lock = LockDevice();
   if (!m_inScene)
@@ -6173,6 +6255,9 @@ MTLD3D9Device::EndScene() {
   FlushDrawBatch();
   flushOpenWork();
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::EndScene", diag_hr_);
+  return diag_hr_;
 }
 // Clear: validation per DXVK d3d9_device.cpp and wined3d
 // device.c. The clear region is the viewport, narrowed by the scissor
@@ -6186,6 +6271,7 @@ MTLD3D9Device::EndScene() {
 // clears the whole attachment), so they go through emitClippedClear.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::Clear(DWORD Count, const D3DRECT *pRects, DWORD Flags, D3DCOLOR Color, float Z, DWORD Stencil) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_Clear);
   D9DeviceLock lock = LockDevice();
   // DXVK: Count==0 with a non-null rect array is a documented
@@ -6312,10 +6398,14 @@ MTLD3D9Device::Clear(DWORD Count, const D3DRECT *pRects, DWORD Flags, D3DCOLOR C
       surface->flagContainerAutoGenDirty();
   }
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::Clear", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetTransform(D3DTRANSFORMSTATETYPE State, const D3DMATRIX *pMatrix) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetTransform);
   // The index compaction and its table size live in d3d9_matrix.hpp
   // (transform_index / kTransformStateCount); the static_assert below keeps the
@@ -6353,6 +6443,9 @@ MTLD3D9Device::SetTransform(D3DTRANSFORMSTATETYPE State, const D3DMATRIX *pMatri
   m_ffpLightsViewStale = true;
   m_encShadowDirty |= dxmt::D9ES_DIRTY_FFP;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetTransform", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -6370,6 +6463,7 @@ MTLD3D9Device::GetTransform(D3DTRANSFORMSTATETYPE State, D3DMATRIX *pMatrix) {
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::MultiplyTransform(D3DTRANSFORMSTATETYPE State, const D3DMATRIX *pMatrix) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_MultiplyTransform);
   D9DeviceLock lock = LockDevice();
   if (!pMatrix)
@@ -6389,9 +6483,13 @@ MTLD3D9Device::MultiplyTransform(D3DTRANSFORMSTATETYPE State, const D3DMATRIX *p
   m_ffpLightsViewStale = true;
   m_encShadowDirty |= dxmt::D9ES_DIRTY_FFP;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::MultiplyTransform", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetViewport(const D3DVIEWPORT9 *pViewport) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetViewport);
   D9DeviceLock lock = LockDevice();
   if (!pViewport)
@@ -6418,6 +6516,9 @@ MTLD3D9Device::SetViewport(const D3DVIEWPORT9 *pViewport) {
   // applied scissor too.
   m_encShadowDirty |= dxmt::D9ES_DIRTY_VIEWPORT | dxmt::D9ES_DIRTY_SCISSOR_RECT;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetViewport", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -6436,6 +6537,7 @@ MTLD3D9Device::GetViewport(D3DVIEWPORT9 *pViewport) {
 // STUB_HR here would trip the ones that do not check the result.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetMaterial(const D3DMATERIAL9 *pMaterial) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetMaterial);
   D9DeviceLock lock = LockDevice();
   if (!pMaterial)
@@ -6453,6 +6555,9 @@ MTLD3D9Device::SetMaterial(const D3DMATERIAL9 *pMaterial) {
   m_material = *pMaterial;
   m_encShadowDirty |= dxmt::D9ES_DIRTY_FFP;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetMaterial", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -6470,6 +6575,7 @@ MTLD3D9Device::GetMaterial(D3DMATERIAL9 *pMaterial) {
 // disabled. Negative Type is INVALIDCALL.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetLight(DWORD Index, const D3DLIGHT9 *pLight) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetLight);
   D9DeviceLock lock = LockDevice();
   if (!pLight)
@@ -6507,6 +6613,9 @@ MTLD3D9Device::SetLight(DWORD Index, const D3DLIGHT9 *pLight) {
       idxs.push_back(Index);
   }
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetLight", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -6532,6 +6641,7 @@ MTLD3D9Device::GetLight(DWORD Index, D3DLIGHT9 *pLight) {
 // apps can LightEnable(0, TRUE) without first SetLight'ing.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::LightEnable(DWORD Index, BOOL Enable) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_LightEnable);
   D9DeviceLock lock = LockDevice();
   // Recording targets the block's seed-captured vectors instead of
@@ -6569,6 +6679,9 @@ MTLD3D9Device::LightEnable(DWORD Index, BOOL Enable) {
       idxs.push_back(Index);
   }
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::LightEnable", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -6590,6 +6703,7 @@ MTLD3D9Device::GetLightEnable(DWORD Index, BOOL *pEnable) {
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetClipPlane(DWORD Index, const float *pPlane) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetClipPlane);
   D9DeviceLock lock = LockDevice();
   if (!pPlane)
@@ -6613,6 +6727,9 @@ MTLD3D9Device::SetClipPlane(DWORD Index, const float *pPlane) {
     m_clipPlanes[Index][i] = pPlane[i];
   m_encShadowDirty |= dxmt::D9ES_DIRTY_CLIP_PLANES;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetClipPlane", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::GetClipPlane(DWORD Index, float *pPlane) {
@@ -6649,6 +6766,7 @@ MTLD3D9Device::GetClipPlane(DWORD Index, float *pPlane) {
 //    if a real MSAA title ever needs the smoothing.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetRenderState(D3DRENDERSTATETYPE State, DWORD Value) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetRenderState);
   D9DeviceLock lock = LockDevice();
   // One of the hottest entry points in D3D9 (D3DX effect frameworks
@@ -6680,6 +6798,9 @@ MTLD3D9Device::SetRenderState(D3DRENDERSTATETYPE State, DWORD Value) {
   // pending BatchedDraw already references its own frozen pod_snapshot.
   m_encShadowDirty |= dxmt::D9ES_DIRTY_RENDER_STATES;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetRenderState", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -6709,6 +6830,7 @@ MTLD3D9Device::GetRenderState(D3DRENDERSTATETYPE State, DWORD *pValue) {
 // category on Apply.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreateStateBlock(D3DSTATEBLOCKTYPE Type, IDirect3DStateBlock9 **ppSB) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateStateBlock);
   D9DeviceLock lock = LockDevice();
   if (!ppSB)
@@ -6752,10 +6874,14 @@ MTLD3D9Device::CreateStateBlock(D3DSTATEBLOCKTYPE Type, IDirect3DStateBlock9 **p
   sb->markLosable();
   *ppSB = sb;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateStateBlock", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::BeginStateBlock() {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_BeginStateBlock);
   D9DeviceLock lock = LockDevice();
   if (m_inStateBlockRecord)
@@ -6801,10 +6927,14 @@ MTLD3D9Device::BeginStateBlock() {
   m_recordingBlock = sb;
   m_inStateBlockRecord = true;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::BeginStateBlock", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::EndStateBlock(IDirect3DStateBlock9 **ppSB) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_EndStateBlock);
   D9DeviceLock lock = LockDevice();
   // End-without-Begin must leave the out-pointer untouched (wine
@@ -6824,6 +6954,9 @@ MTLD3D9Device::EndStateBlock(IDirect3DStateBlock9 **ppSB) {
   sb->markLosable();
   *ppSB = sb;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::EndStateBlock", diag_hr_);
+  return diag_hr_;
 }
 // SetClipStatus/GetClipStatus: vestigial FFP-era occlusion bookkeeping.
 // wined3d device.c stubs wined3d_device_set_clip_status /
@@ -6832,12 +6965,16 @@ MTLD3D9Device::EndStateBlock(IDirect3DStateBlock9 **ppSB) {
 // round-trip the struct so a read-back is consistent, return D3D_OK.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetClipStatus(const D3DCLIPSTATUS9 *pClipStatus) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetClipStatus);
   D9DeviceLock lock = LockDevice();
   if (!pClipStatus)
     return D3DERR_INVALIDCALL;
   m_clipStatus = *pClipStatus;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetClipStatus", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::GetClipStatus(D3DCLIPSTATUS9 *pClipStatus) {
@@ -6906,6 +7043,7 @@ MTLD3D9Device::GetTexture(DWORD Stage, IDirect3DBaseTexture9 **ppTexture) {
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetTexture(DWORD Stage, IDirect3DBaseTexture9 *pTexture) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetTexture);
   D9DeviceLock lock = LockDevice();
   uint32_t slot = texture_stage_to_slot(Stage);
@@ -6962,12 +7100,16 @@ MTLD3D9Device::SetTexture(DWORD Stage, IDirect3DBaseTexture9 *pTexture) {
     common->AddRefPrivate();
   QueueRefOp(static_cast<PendingRefOp::Slot>(PendingRefOp::Texture0 + slot), common);
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetTexture", diag_hr_);
+  return diag_hr_;
 }
 
 // FFP texture-blend: stage 0..7, type D3DTSS_COLOROP..CONSTANT (1..32).
 // Programmable-PS apps call even with active shaders; return OK (not E_NOTIMPL) matching DXVK.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetTextureStageState(DWORD Stage, D3DTEXTURESTAGESTATETYPE Type, DWORD Value) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetTextureStageState);
   D9DeviceLock lock = LockDevice();
   // wined3d d3d9/device.c returns D3D_OK silently for out-of-range
@@ -6991,6 +7133,9 @@ MTLD3D9Device::SetTextureStageState(DWORD Stage, D3DTEXTURESTAGESTATETYPE Type, 
   // source of truth for Get and state-block capture (calling-thread only).
   m_encShadowDirty |= dxmt::D9ES_DIRTY_TEXTURE_STAGE_STATES;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetTextureStageState", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -7029,6 +7174,7 @@ MTLD3D9Device::GetSamplerState(DWORD Sampler, D3DSAMPLERSTATETYPE Type, DWORD *p
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetSamplerState(DWORD Sampler, D3DSAMPLERSTATETYPE Type, DWORD Value) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetSamplerState);
   D9DeviceLock lock = LockDevice();
   // wined3d and DXVK size their sampler-state arrays at exactly
@@ -7060,6 +7206,9 @@ MTLD3D9Device::SetSamplerState(DWORD Sampler, D3DSAMPLERSTATETYPE Type, DWORD Va
   m_samplerStates[slot][Type] = Value;
   m_encShadowDirty |= dxmt::D9ES_DIRTY_SAMPLER_STATES;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetSamplerState", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::ValidateDevice(DWORD *pNumPasses) {
@@ -7105,6 +7254,7 @@ MTLD3D9Device::ValidateDevice(DWORD *pNumPasses) {
 // apps' init paths hr-check these.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetPaletteEntries(UINT PaletteNumber, const PALETTEENTRY *pEntries) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetPaletteEntries);
   D9DeviceLock lock = LockDevice();
   if (pEntries == nullptr)
@@ -7128,6 +7278,9 @@ MTLD3D9Device::SetPaletteEntries(UINT PaletteNumber, const PALETTEENTRY *pEntrie
     std::memcpy(it->second.data(), pEntries, sizeof(PALETTEENTRY) * 256);
   }
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetPaletteEntries", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::GetPaletteEntries(UINT PaletteNumber, PALETTEENTRY *pEntries) {
@@ -7143,6 +7296,7 @@ MTLD3D9Device::GetPaletteEntries(UINT PaletteNumber, PALETTEENTRY *pEntries) {
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetCurrentTexturePalette(UINT PaletteNumber) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetCurrentTexturePalette);
   D9DeviceLock lock = LockDevice();
   // DXVK note: when FFP P8 sampler lands, this should kick a texture
@@ -7150,6 +7304,9 @@ MTLD3D9Device::SetCurrentTexturePalette(UINT PaletteNumber) {
   // for now matches DXVK's TODO at d3d9_device.cpp.
   m_currentTexturePalette = PaletteNumber;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetCurrentTexturePalette", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::GetCurrentTexturePalette(UINT *PaletteNumber) {
@@ -7162,6 +7319,7 @@ MTLD3D9Device::GetCurrentTexturePalette(UINT *PaletteNumber) {
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetScissorRect(const RECT *pRect) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetScissorRect);
   D9DeviceLock lock = LockDevice();
   if (!pRect)
@@ -7177,6 +7335,9 @@ MTLD3D9Device::SetScissorRect(const RECT *pRect) {
   m_scissorRect = *pRect;
   m_encShadowDirty |= dxmt::D9ES_DIRTY_SCISSOR_RECT;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetScissorRect", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -7190,6 +7351,7 @@ MTLD3D9Device::GetScissorRect(RECT *pRect) {
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetSoftwareVertexProcessing(BOOL bSoftware) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetSoftwareVertexProcessing);
   D9DeviceLock lock = LockDevice();
   // Pure state echo (DXVK D3D9DeviceEx::SetSoftwareVertexProcessing): the mode
@@ -7212,6 +7374,9 @@ MTLD3D9Device::SetSoftwareVertexProcessing(BOOL bSoftware) {
   m_encShadowDirty |= dxmt::D9ES_DIRTY_SWVP;
   m_swvpDrawRejected = false;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetSoftwareVertexProcessing", diag_hr_);
+  return diag_hr_;
 }
 BOOL STDMETHODCALLTYPE
 MTLD3D9Device::GetSoftwareVertexProcessing() {
@@ -7223,6 +7388,7 @@ MTLD3D9Device::GetSoftwareVertexProcessing() {
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetNPatchMode(float nSegments) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetNPatchMode);
   D9DeviceLock lock = LockDevice();
   // Pure device state (DXVK stores m_state.nPatchSegments, wined3d
@@ -7232,6 +7398,9 @@ MTLD3D9Device::SetNPatchMode(float nSegments) {
   // MaxNpatchTessellationLevel 0), only the round-trip contract matters.
   m_nPatchMode = nSegments;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetNPatchMode", diag_hr_);
+  return diag_hr_;
 }
 float STDMETHODCALLTYPE
 MTLD3D9Device::GetNPatchMode() {
@@ -7270,6 +7439,7 @@ MTLD3D9Device::swvpDrawGateRejects() {
 // Per-(RT,DS) encoder batching avoids tile-store/load; BatchedDraw POD-COW is DXVK m_dirty analogue.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::DrawPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_DrawPrimitive);
   D9DeviceLock lock = LockDevice();
   // Caller-thread cost is queue-into-chunk only; encode/dispatch happen on the encode thread.
@@ -7317,6 +7487,9 @@ MTLD3D9Device::DrawPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, U
   QueueBatchedDraw(std::move(draw));
   // Accumulate. State-change handlers + Present drain m_pendingDraws.
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::DrawPrimitive", diag_hr_);
+  return diag_hr_;
 }
 
 // DrawIndexedPrimitive: same as DrawPrimitive + bound IB + BaseVertexIndex.
@@ -7326,6 +7499,7 @@ MTLD3D9Device::DrawIndexedPrimitive(
     D3DPRIMITIVETYPE PrimitiveType, INT BaseVertexIndex, UINT MinVertexIndex, UINT NumVertices, UINT StartIndex,
     UINT PrimitiveCount
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_DrawIndexedPrimitive);
   D9DeviceLock lock = LockDevice();
   // wined3d d3d9_device_DrawIndexedPrimitive (device.c) gates on
@@ -7443,6 +7617,9 @@ MTLD3D9Device::DrawIndexedPrimitive(
   QueueBatchedDraw(std::move(draw));
   // Accumulate. State-change handlers + Present drain m_pendingDraws.
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::DrawIndexedPrimitive", diag_hr_);
+  return diag_hr_;
 }
 
 // Shared body: bound-stream differ in IB/count/BaseVertexIndex; UP inject transient slot-0.
@@ -11106,6 +11283,7 @@ HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::DrawPrimitiveUP(
     D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCount, const void *pVertexStreamZeroData, UINT VertexStreamZeroStride
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_DrawPrimitiveUP);
   D9DeviceLock lock = LockDevice();
   // wined3d device.c gates on vertex_declaration only; no
@@ -11216,6 +11394,9 @@ MTLD3D9Device::DrawPrimitiveUP(
   // Accumulate. State-change handlers + Present drain m_pendingDraws.
   clear_up_stream0(0);
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::DrawPrimitiveUP", diag_hr_);
+  return diag_hr_;
 }
 // DrawIndexedPrimitiveUP: inline vertex + index via transient buffers.
 // Vertex buffer sized to (MinVertexIndex + NumVertices) * stride.
@@ -11224,6 +11405,7 @@ MTLD3D9Device::DrawIndexedPrimitiveUP(
     D3DPRIMITIVETYPE PrimitiveType, UINT MinVertexIndex, UINT NumVertices, UINT PrimitiveCount, const void *pIndexData,
     D3DFORMAT IndexDataFormat, const void *pVertexStreamZeroData, UINT VertexStreamZeroStride
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_DrawIndexedPrimitiveUP);
   D9DeviceLock lock = LockDevice();
   // wined3d device.c gates on vertex_declaration only; no
@@ -11365,12 +11547,16 @@ MTLD3D9Device::DrawIndexedPrimitiveUP(
   // Accumulate. State-change handlers + Present drain m_pendingDraws.
   clear_up_state(0);
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::DrawIndexedPrimitiveUP", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::ProcessVertices(
     UINT SrcStartIndex, UINT DestIndex, UINT VertexCount, IDirect3DVertexBuffer9 *pDestBuffer,
     IDirect3DVertexDeclaration9 *pVertexDecl, DWORD Flags
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_ProcessVertices);
   D9DeviceLock lock = LockDevice();
   // CPU vertex processing, ported from wined3d process_vertices_strided
@@ -11612,6 +11798,9 @@ MTLD3D9Device::ProcessVertices(
   dstBuffer->Unlock();
   unlockStreams();
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::ProcessVertices", diag_hr_);
+  return diag_hr_;
 }
 // CreateVertexDeclaration: wined3d device.c. The element array
 // includes a D3DDECL_END() terminator; MTLD3D9VertexDeclaration's
@@ -11619,6 +11808,7 @@ MTLD3D9Device::ProcessVertices(
 // returned count matches wined3d.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreateVertexDeclaration(const D3DVERTEXELEMENT9 *pVertexElements, IDirect3DVertexDeclaration9 **ppDecl) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateVertexDeclaration);
   D9DeviceLock lock = LockDevice();
   if (!ppDecl)
@@ -11638,12 +11828,16 @@ MTLD3D9Device::CreateVertexDeclaration(const D3DVERTEXELEMENT9 *pVertexElements,
     return hr;
   *ppDecl = ::dxmt::ref<IDirect3DVertexDeclaration9>(new MTLD3D9VertexDeclaration(this, pVertexElements));
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateVertexDeclaration", diag_hr_);
+  return diag_hr_;
 }
 
 // SetVertexDeclaration / GetVertexDeclaration: same priv-pin shape
 // as SetTexture / SetRenderTarget; cross-device check via deviceRaw().
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetVertexDeclaration(IDirect3DVertexDeclaration9 *pDecl) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetVertexDeclaration);
   D9DeviceLock lock = LockDevice();
   auto *decl = static_cast<MTLD3D9VertexDeclaration *>(pDecl);
@@ -11671,6 +11865,9 @@ MTLD3D9Device::SetVertexDeclaration(IDirect3DVertexDeclaration9 *pDecl) {
     decl->AddRefPrivate();
   QueueRefOp(PendingRefOp::VertexDeclaration, decl);
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetVertexDeclaration", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -11715,6 +11912,7 @@ MTLD3D9Device::getOrCreateFvfDecl(DWORD FVF) {
 // SetFVF and SetVertexDeclaration alias same slot; last call wins.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetFVF(DWORD FVF) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetFVF);
   D9DeviceLock lock = LockDevice();
   // FVF=0 is not a valid FVF: wined3d (device.c) and DXVK (d3d9_device.cpp)
@@ -11745,6 +11943,9 @@ MTLD3D9Device::SetFVF(DWORD FVF) {
     new_decl->AddRefPrivate();
   QueueRefOp(PendingRefOp::VertexDeclaration, new_decl);
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetFVF", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -11760,6 +11961,7 @@ MTLD3D9Device::GetFVF(DWORD *pFVF) {
 // Length via shader_bytecode_dword_count helper (not full decoder; swappable later).
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreateVertexShader(const DWORD *pFunction, IDirect3DVertexShader9 **ppShader) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateVertexShader);
   D9DeviceLock lock = LockDevice();
   if (!ppShader)
@@ -11797,6 +11999,9 @@ MTLD3D9Device::CreateVertexShader(const DWORD *pFunction, IDirect3DVertexShader9
   auto module = getOrCreateVertexShaderModule(pFunction, dwords, std::move(*metadata));
   *ppShader = ::dxmt::ref<IDirect3DVertexShader9>(new MTLD3D9VertexShader(this, std::move(module)));
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateVertexShader", diag_hr_);
+  return diag_hr_;
 }
 
 // SetVertexShader / GetVertexShader: same priv-pin shape as the
@@ -11804,6 +12009,7 @@ MTLD3D9Device::CreateVertexShader(const DWORD *pFunction, IDirect3DVertexShader9
 // vertex processing).
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetVertexShader(IDirect3DVertexShader9 *pShader) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetVertexShader);
   D9DeviceLock lock = LockDevice();
   auto *shader = static_cast<MTLD3D9VertexShader *>(pShader);
@@ -11830,6 +12036,9 @@ MTLD3D9Device::SetVertexShader(IDirect3DVertexShader9 *pShader) {
     shader->AddRefPrivate();
   QueueRefOp(PendingRefOp::VertexShader, shader);
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetVertexShader", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -11854,6 +12063,7 @@ MTLD3D9Device::GetVertexShader(IDirect3DVertexShader9 **ppShader) {
 // normalises to TRUE/FALSE on store and Get is a pass-through.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetVertexShaderConstantF(UINT StartRegister, const float *pConstantData, UINT Vector4fCount) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetVertexShaderConstantF);
   census::shaderConstF(Vector4fCount);
   D9DeviceLock lock = LockDevice();
@@ -11931,6 +12141,9 @@ MTLD3D9Device::SetVertexShaderConstantF(UINT StartRegister, const float *pConsta
     }
   }
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetVertexShaderConstantF", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -11966,6 +12179,7 @@ MTLD3D9Device::GetVertexShaderConstantF(UINT StartRegister, float *pConstantData
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetVertexShaderConstantI(UINT StartRegister, const int *pConstantData, UINT Vector4iCount) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetVertexShaderConstantI);
   D9DeviceLock lock = LockDevice();
   if (StartRegister > std::numeric_limits<UINT>::max() - Vector4iCount)
@@ -11987,6 +12201,9 @@ MTLD3D9Device::SetVertexShaderConstantI(UINT StartRegister, const int *pConstant
   std::memcpy(&m_vsConstantsI[StartRegister][0], pConstantData, bytes);
   m_encShadowDirty |= dxmt::D9ES_DIRTY_VS_CONST_I;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetVertexShaderConstantI", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -12007,6 +12224,7 @@ MTLD3D9Device::GetVertexShaderConstantI(UINT StartRegister, int *pConstantData, 
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetVertexShaderConstantB(UINT StartRegister, const BOOL *pConstantData, UINT BoolCount) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetVertexShaderConstantB);
   D9DeviceLock lock = LockDevice();
   if (StartRegister > std::numeric_limits<UINT>::max() - BoolCount)
@@ -12038,6 +12256,9 @@ MTLD3D9Device::SetVertexShaderConstantB(UINT StartRegister, const BOOL *pConstan
     return D3D_OK;
   m_encShadowDirty |= dxmt::D9ES_DIRTY_VS_CONST_B;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetVertexShaderConstantB", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -12063,6 +12284,7 @@ HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetStreamSource(
     UINT StreamNumber, IDirect3DVertexBuffer9 *pStreamData, UINT OffsetInBytes, UINT Stride
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetStreamSource);
   D9DeviceLock lock = LockDevice();
   if (StreamNumber >= D3D9_MAX_VERTEX_STREAMS)
@@ -12112,6 +12334,9 @@ MTLD3D9Device::SetStreamSource(
     QueueRefOp(static_cast<PendingRefOp::Slot>(PendingRefOp::VertexBuffer0 + StreamNumber), buffer);
   }
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetStreamSource", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -12147,6 +12372,7 @@ MTLD3D9Device::GetStreamSource(
 // (the spec default) reverts the stream to per-vertex stepping.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetStreamSourceFreq(UINT StreamNumber, UINT Setting) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetStreamSourceFreq);
   D9DeviceLock lock = LockDevice();
   if (StreamNumber >= D3D9_MAX_VERTEX_STREAMS)
@@ -12171,6 +12397,9 @@ MTLD3D9Device::SetStreamSourceFreq(UINT StreamNumber, UINT Setting) {
   m_streamFreq[StreamNumber] = Setting;
   m_encShadowDirty |= dxmt::D9ES_DIRTY_STREAM_FREQ;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetStreamSourceFreq", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -12188,6 +12417,7 @@ MTLD3D9Device::GetStreamSourceFreq(UINT StreamNumber, UINT *pSetting) {
 // switching to a different draw-call shape).
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetIndices(IDirect3DIndexBuffer9 *pIndexData) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetIndices);
   D9DeviceLock lock = LockDevice();
   auto *buffer = static_cast<MTLD3D9IndexBuffer *>(pIndexData);
@@ -12206,6 +12436,9 @@ MTLD3D9Device::SetIndices(IDirect3DIndexBuffer9 *pIndexData) {
     buffer->AddRefPrivate();
   QueueRefOp(PendingRefOp::IndexBuffer, buffer);
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetIndices", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -12225,6 +12458,7 @@ MTLD3D9Device::GetIndices(IDirect3DIndexBuffer9 **ppIndexData) {
 // mismatch reject (DXVK d3d9_device.cpp).
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreatePixelShader(const DWORD *pFunction, IDirect3DPixelShader9 **ppShader) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreatePixelShader);
   D9DeviceLock lock = LockDevice();
   if (!ppShader)
@@ -12249,10 +12483,14 @@ MTLD3D9Device::CreatePixelShader(const DWORD *pFunction, IDirect3DPixelShader9 *
   auto module = getOrCreatePixelShaderModule(pFunction, dwords, std::move(*metadata));
   *ppShader = ::dxmt::ref<IDirect3DPixelShader9>(new MTLD3D9PixelShader(this, std::move(module)));
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreatePixelShader", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetPixelShader(IDirect3DPixelShader9 *pShader) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetPixelShader);
   D9DeviceLock lock = LockDevice();
   auto *shader = static_cast<MTLD3D9PixelShader *>(pShader);
@@ -12271,6 +12509,9 @@ MTLD3D9Device::SetPixelShader(IDirect3DPixelShader9 *pShader) {
     shader->AddRefPrivate();
   QueueRefOp(PendingRefOp::PixelShader, shader);
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetPixelShader", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -12290,6 +12531,7 @@ MTLD3D9Device::GetPixelShader(IDirect3DPixelShader9 **ppShader) {
 // [0..31] of F but the API surface uses the SM3 limit.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetPixelShaderConstantF(UINT StartRegister, const float *pConstantData, UINT Vector4fCount) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetPixelShaderConstantF);
   census::shaderConstF(Vector4fCount);
   D9DeviceLock lock = LockDevice();
@@ -12334,6 +12576,9 @@ MTLD3D9Device::SetPixelShaderConstantF(UINT StartRegister, const float *pConstan
   std::memcpy(&m_psConstantsF[StartRegister][0], pConstantData, bytes);
   m_encShadowDirty |= dxmt::D9ES_DIRTY_PS_CONST_F;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetPixelShaderConstantF", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -12354,6 +12599,7 @@ MTLD3D9Device::GetPixelShaderConstantF(UINT StartRegister, float *pConstantData,
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetPixelShaderConstantI(UINT StartRegister, const int *pConstantData, UINT Vector4iCount) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetPixelShaderConstantI);
   D9DeviceLock lock = LockDevice();
   if (StartRegister > std::numeric_limits<UINT>::max() - Vector4iCount)
@@ -12375,6 +12621,9 @@ MTLD3D9Device::SetPixelShaderConstantI(UINT StartRegister, const int *pConstantD
   std::memcpy(&m_psConstantsI[StartRegister][0], pConstantData, bytes);
   m_encShadowDirty |= dxmt::D9ES_DIRTY_PS_CONST_I;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetPixelShaderConstantI", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -12395,6 +12644,7 @@ MTLD3D9Device::GetPixelShaderConstantI(UINT StartRegister, int *pConstantData, U
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetPixelShaderConstantB(UINT StartRegister, const BOOL *pConstantData, UINT BoolCount) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetPixelShaderConstantB);
   D9DeviceLock lock = LockDevice();
   if (StartRegister > std::numeric_limits<UINT>::max() - BoolCount)
@@ -12423,6 +12673,9 @@ MTLD3D9Device::SetPixelShaderConstantB(UINT StartRegister, const BOOL *pConstant
     return D3D_OK;
   m_encShadowDirty |= dxmt::D9ES_DIRTY_PS_CONST_B;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetPixelShaderConstantB", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -12448,6 +12701,7 @@ MTLD3D9Device::GetPixelShaderConstantB(UINT StartRegister, BOOL *pConstantData, 
 // INVALIDCALL because deleting an unknown handle is per-spec illegal.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::DrawRectPatch(UINT Handle, const float *pNumSegs, const D3DRECTPATCH_INFO *pRectPatchInfo) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_DrawRectPatch);
   D9DeviceLock lock = LockDevice();
   (void)Handle;
@@ -12457,9 +12711,13 @@ MTLD3D9Device::DrawRectPatch(UINT Handle, const float *pNumSegs, const D3DRECTPA
   if (!warned.exchange(true))
     Logger::warn("d3d9: DrawRectPatch is a stub (HOS deprecated); silently skipping");
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::DrawRectPatch", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::DrawTriPatch(UINT Handle, const float *pNumSegs, const D3DTRIPATCH_INFO *pTriPatchInfo) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_DrawTriPatch);
   D9DeviceLock lock = LockDevice();
   (void)Handle;
@@ -12469,9 +12727,13 @@ MTLD3D9Device::DrawTriPatch(UINT Handle, const float *pNumSegs, const D3DTRIPATC
   if (!warned.exchange(true))
     Logger::warn("d3d9: DrawTriPatch is a stub (HOS deprecated); silently skipping");
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::DrawTriPatch", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::DeletePatch(UINT Handle) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_DeletePatch);
   D9DeviceLock lock = LockDevice();
   (void)Handle;
@@ -12482,6 +12744,9 @@ MTLD3D9Device::DeletePatch(UINT Handle) {
   if (!warned.exchange(true))
     Logger::warn("d3d9: DeletePatch is a stub (HOS deprecated); returning D3DERR_INVALIDCALL");
   return D3DERR_INVALIDCALL;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::DeletePatch", diag_hr_);
+  return diag_hr_;
 }
 // CreateQuery: wined3d device.c d3d9_device_CreateQuery (~3940). The
 // Type-only call (ppQuery == NULL) is the "is this query type
@@ -12489,6 +12754,7 @@ MTLD3D9Device::DeletePatch(UINT Handle) {
 // IDirect3DQuery9.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreateQuery(D3DQUERYTYPE Type, IDirect3DQuery9 **ppQuery) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateQuery);
   D9DeviceLock lock = LockDevice();
   // ppQuery=NULL is a support probe. The out pointer is written only on
@@ -12503,10 +12769,14 @@ MTLD3D9Device::CreateQuery(D3DQUERYTYPE Type, IDirect3DQuery9 **ppQuery) {
   q->AddRef();
   *ppQuery = q;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateQuery", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetConvolutionMonoKernel(UINT, UINT, float *, float *) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetConvolutionMonoKernel);
   D9DeviceLock lock = LockDevice();
   // Gated by D3DPTFILTERCAPS_CONVOLUTIONMONO, which neither DXVK nor dxmt
@@ -12514,12 +12784,16 @@ MTLD3D9Device::SetConvolutionMonoKernel(UINT, UINT, float *, float *) {
   // INVALIDCALL. E_NOTIMPL instead sends hr-strict initialisation paths into
   // failure handling they cannot recover from.
   return D3DERR_INVALIDCALL;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetConvolutionMonoKernel", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::ComposeRects(
     IDirect3DSurface9 *pSrc, IDirect3DSurface9 *pDst, IDirect3DVertexBuffer9 *pSrcRectDescs, UINT NumRects,
     IDirect3DVertexBuffer9 *pDstRectDescs, D3DCOMPOSERECTSOP Operation, INT Xoffset, INT Yoffset
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_ComposeRects);
   D9DeviceLock lock = LockDevice();
   // MSDN: any of the four surface/buffer pointers null is INVALIDCALL.
@@ -12541,11 +12815,15 @@ MTLD3D9Device::ComposeRects(
   if (!warned.exchange(true))
     Logger::warn("d3d9: ComposeRects is a stub; silently skipping");
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::ComposeRects", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::PresentEx(
     const RECT *pSourceRect, const RECT *pDestRect, HWND hDestWindowOverride, const RGNDATA *pDirtyRegion, DWORD dwFlags
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_PresentEx);
   D9DeviceLock lock = LockDevice();
   // An Ex present on an unfocused fullscreen chain reports occlusion
@@ -12554,6 +12832,9 @@ MTLD3D9Device::PresentEx(
   if (m_implicitSwapChain && !m_implicitSwapChain->windowed() && !fullscreenOwnsDisplay())
     return S_PRESENT_OCCLUDED;
   return m_implicitSwapChain->Present(pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion, dwFlags);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::PresentEx", diag_hr_);
+  return diag_hr_;
 }
 // Device9Ex bookkeeping returns. Pre-Reset / pre-frame-pacing dxmt
 // has nothing meaningful to back any of these with; Metal doesn't
@@ -12574,6 +12855,7 @@ MTLD3D9Device::GetGPUThreadPriority(INT *pPriority) {
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetGPUThreadPriority(INT Priority) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetGPUThreadPriority);
   D9DeviceLock lock = LockDevice();
   // MSDN: Priority must be in [-7, 7]; out-of-range is INVALIDCALL. Metal has
@@ -12584,14 +12866,21 @@ MTLD3D9Device::SetGPUThreadPriority(INT Priority) {
   if (Priority < -7 || Priority > 7)
     return D3DERR_INVALIDCALL;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetGPUThreadPriority", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::WaitForVBlank(UINT iSwapChain) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_WaitForVBlank);
   D9DeviceLock lock = LockDevice();
   if (iSwapChain != 0)
     return D3DERR_INVALIDCALL;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::WaitForVBlank", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CheckResourceResidency(IDirect3DResource9 **pResourceArray, UINT32 NumResources) {
@@ -12610,6 +12899,7 @@ MTLD3D9Device::CheckResourceResidency(IDirect3DResource9 **pResourceArray, UINT3
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::SetMaximumFrameLatency(UINT MaxLatency) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_SetMaximumFrameLatency);
   D9DeviceLock lock = LockDevice();
   if (MaxLatency > 30)
@@ -12622,6 +12912,9 @@ MTLD3D9Device::SetMaximumFrameLatency(UINT MaxLatency) {
   // BackBufferCount-implied limit between this setter and the next
   // Present; the per-Present clamp closes that window.
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::SetMaximumFrameLatency", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::GetMaximumFrameLatency(UINT *pMaxLatency) {
@@ -12732,6 +13025,7 @@ MTLD3D9Device::CreateRenderTargetEx(
     UINT Width, UINT Height, D3DFORMAT Format, D3DMULTISAMPLE_TYPE MultiSample, DWORD MultisampleQuality, BOOL Lockable,
     IDirect3DSurface9 **ppSurface, HANDLE *pSharedHandle, DWORD Usage
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateRenderTargetEx);
   D9DeviceLock lock = LockDevice();
   if (!ppSurface)
@@ -12750,12 +13044,16 @@ MTLD3D9Device::CreateRenderTargetEx(
   if (SUCCEEDED(hr) && Usage)
     static_cast<MTLD3D9Surface *>(*ppSurface)->addDescUsage(Usage);
   return hr;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateRenderTargetEx", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreateOffscreenPlainSurfaceEx(
     UINT Width, UINT Height, D3DFORMAT Format, D3DPOOL Pool, IDirect3DSurface9 **ppSurface, HANDLE *pSharedHandle,
     DWORD Usage
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateOffscreenPlainSurfaceEx);
   D9DeviceLock lock = LockDevice();
   if (!ppSurface)
@@ -12770,12 +13068,16 @@ MTLD3D9Device::CreateOffscreenPlainSurfaceEx(
   // the non-Ex path, which handles that pool and rejects the handle on every
   // other pool the same way.
   return CreateOffscreenPlainSurface(Width, Height, Format, Pool, ppSurface, pSharedHandle);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateOffscreenPlainSurfaceEx", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::CreateDepthStencilSurfaceEx(
     UINT Width, UINT Height, D3DFORMAT Format, D3DMULTISAMPLE_TYPE MultiSample, DWORD MultisampleQuality, BOOL Discard,
     IDirect3DSurface9 **ppSurface, HANDLE *pSharedHandle, DWORD Usage
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_CreateDepthStencilSurfaceEx);
   D9DeviceLock lock = LockDevice();
   if (!ppSurface)
@@ -12796,9 +13098,13 @@ MTLD3D9Device::CreateDepthStencilSurfaceEx(
   if (SUCCEEDED(hr) && Usage)
     static_cast<MTLD3D9Surface *>(*ppSurface)->addDescUsage(Usage);
   return hr;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::CreateDepthStencilSurfaceEx", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::ResetEx(D3DPRESENT_PARAMETERS *pPresentationParameters, D3DDISPLAYMODEEX *pFullscreenDisplayMode) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Device_ResetEx);
   D9DeviceLock lock = LockDevice();
   if (!m_isEx)
@@ -12817,6 +13123,9 @@ MTLD3D9Device::ResetEx(D3DPRESENT_PARAMETERS *pPresentationParameters, D3DDISPLA
                                  pFullscreenDisplayMode->Height != pPresentationParameters->BackBufferHeight))
     return D3DERR_INVALIDCALL;
   return Reset(pPresentationParameters);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Device::ResetEx", diag_hr_);
+  return diag_hr_;
 }
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Device::GetDisplayModeEx(UINT iSwapChain, D3DDISPLAYMODEEX *pMode, D3DDISPLAYROTATION *pRotation) {

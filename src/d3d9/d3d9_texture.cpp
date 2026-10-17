@@ -14,6 +14,7 @@
 #include "log/log.hpp"
 
 #include "d3d9_census.hpp"
+#include "d3d9_diag_hr.hpp"
 
 namespace dxmt {
 
@@ -730,9 +731,13 @@ MTLD3D9Texture::GetDevice(IDirect3DDevice9 **ppDevice) {
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Texture::SetPrivateData(REFGUID refguid, const void *pData, DWORD SizeOfData, DWORD Flags) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Texture_SetPrivateData);
   D9DeviceLock lock = m_device->LockDevice();
   return D3D9SetPrivateData(m_privateData, refguid, pData, SizeOfData, Flags);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Texture::SetPrivateData", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -744,9 +749,13 @@ MTLD3D9Texture::GetPrivateData(REFGUID refguid, void *pData, DWORD *pSizeOfData)
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Texture::FreePrivateData(REFGUID refguid) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Texture_FreePrivateData);
   D9DeviceLock lock = m_device->LockDevice();
   return D3D9FreePrivateData(m_privateData, refguid);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Texture::FreePrivateData", diag_hr_);
+  return diag_hr_;
 }
 
 DWORD STDMETHODCALLTYPE
@@ -811,6 +820,7 @@ MTLD3D9Texture::GetLevelCount() {
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Texture::SetAutoGenFilterType(D3DTEXTUREFILTERTYPE FilterType) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Texture_SetAutoGenFilterType);
   D9DeviceLock lock = m_device->LockDevice();
   // wined3d texture.c d3d9_texture_2d_SetAutoGenFilterType: reject
@@ -821,6 +831,9 @@ MTLD3D9Texture::SetAutoGenFilterType(D3DTEXTUREFILTERTYPE FilterType) {
     return D3DERR_INVALIDCALL;
   m_autoGenFilter = FilterType;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Texture::SetAutoGenFilterType", diag_hr_);
+  return diag_hr_;
 }
 
 D3DTEXTUREFILTERTYPE STDMETHODCALLTYPE
@@ -883,6 +896,7 @@ MTLD3D9Texture::GetSurfaceLevel(UINT Level, IDirect3DSurface9 **ppSurfaceLevel) 
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Texture::LockRect(UINT Level, D3DLOCKED_RECT *pLockedRect, const RECT *pRect, DWORD Flags) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Texture_LockRect);
   D9DeviceLock lock = m_device->LockDevice();
   if (Level >= m_levels.size())
@@ -890,10 +904,14 @@ MTLD3D9Texture::LockRect(UINT Level, D3DLOCKED_RECT *pLockedRect, const RECT *pR
   if ((m_usage & D3DUSAGE_AUTOGENMIPMAP) && Level != 0)
     return D3DERR_INVALIDCALL;
   return m_levels[Level]->LockRect(pLockedRect, pRect, Flags);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Texture::LockRect", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Texture::UnlockRect(UINT Level) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Texture_UnlockRect);
   D9DeviceLock lock = m_device->LockDevice();
   if (Level >= m_levels.size())
@@ -905,10 +923,14 @@ MTLD3D9Texture::UnlockRect(UINT Level) {
   // routed through this wrapper) records them too. wined3d records both via the
   // shared texture regardless of entry point.
   return m_levels[Level]->UnlockRect();
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Texture::UnlockRect", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Texture::AddDirtyRect(const RECT *pDirtyRect) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Texture_AddDirtyRect);
   D9DeviceLock lock = m_device->LockDevice();
   // wined3d wined3d_texture_add_dirty_region: rect==NULL marks the
@@ -936,6 +958,9 @@ MTLD3D9Texture::AddDirtyRect(const RECT *pDirtyRect) {
   // a self-upload) and for a never-locked texture with no mirror.
   stageDirtyRegionUpload(pDirtyRect);
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Texture::AddDirtyRect", diag_hr_);
+  return diag_hr_;
 }
 
 void

@@ -18,6 +18,7 @@
 #include <cstring>
 
 #include "d3d9_census.hpp"
+#include "d3d9_diag_hr.hpp"
 
 namespace dxmt {
 
@@ -320,9 +321,13 @@ MTLD3D9Surface::GetDevice(IDirect3DDevice9 **ppDevice) {
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Surface::SetPrivateData(REFGUID refguid, const void *pData, DWORD SizeOfData, DWORD Flags) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Surface_SetPrivateData);
   D9DeviceLock lock = m_device->LockDevice();
   return D3D9SetPrivateData(m_privateData, refguid, pData, SizeOfData, Flags);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Surface::SetPrivateData", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -334,9 +339,13 @@ MTLD3D9Surface::GetPrivateData(REFGUID refguid, void *pData, DWORD *pSizeOfData)
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Surface::FreePrivateData(REFGUID refguid) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Surface_FreePrivateData);
   D9DeviceLock lock = m_device->LockDevice();
   return D3D9FreePrivateData(m_privateData, refguid);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Surface::FreePrivateData", diag_hr_);
+  return diag_hr_;
 }
 
 DWORD STDMETHODCALLTYPE
@@ -456,6 +465,7 @@ MTLD3D9Surface::GetDesc(D3DSURFACE_DESC *pDesc) {
 // cpu_ptr and correctly falls out at the null check below.
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Surface::LockRect(D3DLOCKED_RECT *pLockedRect, const RECT *pRect, DWORD Flags) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Surface_LockRect);
   D9DeviceLock lock = m_device->LockDevice();
   if (!pLockedRect)
@@ -645,10 +655,14 @@ MTLD3D9Surface::LockRect(D3DLOCKED_RECT *pLockedRect, const RECT *pRect, DWORD F
   // DISCARD re-lock is safe because the prior contents were snapshotted
   // into the ring at Unlock.
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Surface::LockRect", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Surface::UnlockRect() {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Surface_UnlockRect);
   D9DeviceLock lock = m_device->LockDevice();
   // Unlock of a surface that is not currently mapped. DXVK and wined3d forgive
@@ -761,6 +775,9 @@ MTLD3D9Surface::UnlockRect() {
   // ml1490: the lock is released and nothing is half recorded.
   m_device->settleUploadPressure();
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Surface::UnlockRect", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -856,6 +873,7 @@ MTLD3D9Surface::GetDC(HDC *phdc) {
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9Surface::ReleaseDC(HDC hdc) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9Surface_ReleaseDC);
   D9DeviceLock lock = m_device->LockDevice();
 #ifdef _WIN32
@@ -879,6 +897,9 @@ MTLD3D9Surface::ReleaseDC(HDC hdc) {
   (void)hdc;
   return D3DERR_INVALIDCALL;
 #endif
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9Surface::ReleaseDC", diag_hr_);
+  return diag_hr_;
 }
 
 } // namespace dxmt

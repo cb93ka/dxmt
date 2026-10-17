@@ -13,6 +13,7 @@
 #include <cstring>
 
 #include "d3d9_census.hpp"
+#include "d3d9_diag_hr.hpp"
 
 namespace dxmt {
 
@@ -364,9 +365,13 @@ MTLD3D9CubeTexture::GetDevice(IDirect3DDevice9 **ppDevice) {
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9CubeTexture::SetPrivateData(REFGUID refguid, const void *pData, DWORD SizeOfData, DWORD Flags) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9CubeTexture_SetPrivateData);
   D9DeviceLock lock = m_device->LockDevice();
   return D3D9SetPrivateData(m_privateData, refguid, pData, SizeOfData, Flags);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9CubeTexture::SetPrivateData", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -378,9 +383,13 @@ MTLD3D9CubeTexture::GetPrivateData(REFGUID refguid, void *pData, DWORD *pSizeOfD
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9CubeTexture::FreePrivateData(REFGUID refguid) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9CubeTexture_FreePrivateData);
   D9DeviceLock lock = m_device->LockDevice();
   return D3D9FreePrivateData(m_privateData, refguid);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9CubeTexture::FreePrivateData", diag_hr_);
+  return diag_hr_;
 }
 
 DWORD STDMETHODCALLTYPE
@@ -438,6 +447,7 @@ MTLD3D9CubeTexture::GetLevelCount() {
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9CubeTexture::SetAutoGenFilterType(D3DTEXTUREFILTERTYPE FilterType) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9CubeTexture_SetAutoGenFilterType);
   D9DeviceLock lock = m_device->LockDevice();
   // wined3d texture.c d3d9_texture_cube_SetAutoGenFilterType: reject
@@ -446,6 +456,9 @@ MTLD3D9CubeTexture::SetAutoGenFilterType(D3DTEXTUREFILTERTYPE FilterType) {
     return D3DERR_INVALIDCALL;
   m_autoGenFilter = FilterType;
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9CubeTexture::SetAutoGenFilterType", diag_hr_);
+  return diag_hr_;
 }
 
 D3DTEXTUREFILTERTYPE STDMETHODCALLTYPE
@@ -516,6 +529,7 @@ HRESULT STDMETHODCALLTYPE
 MTLD3D9CubeTexture::LockRect(
     D3DCUBEMAP_FACES FaceType, UINT Level, D3DLOCKED_RECT *pLockedRect, const RECT *pRect, DWORD Flags
 ) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9CubeTexture_LockRect);
   D9DeviceLock lock = m_device->LockDevice();
   if (static_cast<uint32_t>(FaceType) >= 6 || Level >= m_level_count)
@@ -524,10 +538,14 @@ MTLD3D9CubeTexture::LockRect(
     return D3DERR_INVALIDCALL;
   uint32_t idx = static_cast<uint32_t>(FaceType) * m_level_count + Level;
   return m_levels[idx]->LockRect(pLockedRect, pRect, Flags);
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9CubeTexture::LockRect", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9CubeTexture::UnlockRect(D3DCUBEMAP_FACES FaceType, UINT Level) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9CubeTexture_UnlockRect);
   D9DeviceLock lock = m_device->LockDevice();
   if (static_cast<uint32_t>(FaceType) >= 6 || Level >= m_level_count)
@@ -547,10 +565,14 @@ MTLD3D9CubeTexture::UnlockRect(D3DCUBEMAP_FACES FaceType, UINT Level) {
   // generateMipmaps on the cube handle. wined3d records both via the shared
   // texture regardless of entry point.
   return m_levels[idx]->UnlockRect();
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9CubeTexture::UnlockRect", diag_hr_);
+  return diag_hr_;
 }
 
 HRESULT STDMETHODCALLTYPE
 MTLD3D9CubeTexture::AddDirtyRect(D3DCUBEMAP_FACES FaceType, const RECT *pDirtyRect) {
+  HRESULT diag_hr_ = [&]() -> HRESULT {
   D3D9_CENSUS(D3D9_CENSUS_MTLD3D9CubeTexture_AddDirtyRect);
   D9DeviceLock lock = m_device->LockDevice();
   // wined3d wined3d_texture_add_dirty_region rejects a layer past the face count
@@ -568,6 +590,9 @@ MTLD3D9CubeTexture::AddDirtyRect(D3DCUBEMAP_FACES FaceType, const RECT *pDirtyRe
     return D3DERR_INVALIDCALL;
   unionDirtyRect(static_cast<uint32_t>(FaceType), pDirtyRect);
   return D3D_OK;
+  }();
+  if (FAILED(diag_hr_)) d3d9_diag_hr("MTLD3D9CubeTexture::AddDirtyRect", diag_hr_);
+  return diag_hr_;
 }
 
 void
