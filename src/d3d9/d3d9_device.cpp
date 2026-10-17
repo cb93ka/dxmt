@@ -8254,7 +8254,10 @@ EmitCommonRenderSetup_d9(
   auto enc_setbuffer = [&](WMTRenderCommandType ty, obj_handle_t buf, uint64_t off, uint8_t idx) {
     obj_handle_t *handle_shadow = (ty == WMTRenderCommandSetVertexBuffer) ? s.vs_buf_handle : s.fs_buf_handle;
     uint64_t *offset_shadow = (ty == WMTRenderCommandSetVertexBuffer) ? s.vs_buf_offset : s.fs_buf_offset;
-    if (handle_shadow[idx] == buf && buf != 0) {
+    // MADEIRA diag: DXMT_D9_NO_BUF_SHADOW=1 re-emits a full setBuffer for
+    // every slot on every draw instead of trusting the per-encoder shadow.
+    static const bool diag_no_buf_shadow = env::getEnvVar("DXMT_D9_NO_BUF_SHADOW") == "1";
+    if (!diag_no_buf_shadow && handle_shadow[idx] == buf && buf != 0) {
       // (buffer, offset) match; the encoder already has the right binding. The
       // const-upload slots hit this on every cluster-hit draw, because a
       // const-cache hit reuses the previous draw's spans verbatim.
@@ -10897,6 +10900,13 @@ MTLD3D9Device::FlushDrawBatch() {
   // the encode lambda would observe the bumped-up NEXT-chunk value).
   uint64_t chunk_seq = m_currentCmdSeq;
   uint64_t chunk_coherent_id = m_cachedSignaled.load(std::memory_order_acquire);
+  // MADEIRA diag: DXMT_D9_RING_LAG=N treats the resolve ring's blocks as
+  // still in flight for N more submissions before they may be reused.
+  static const uint64_t diag_ring_lag = [] {
+    auto v = env::getEnvVar("DXMT_D9_RING_LAG");
+    return v.empty() ? 0ull : std::strtoull(v.c_str(), nullptr, 10);
+  }();
+  chunk_coherent_id = chunk_coherent_id > diag_ring_lag ? chunk_coherent_id - diag_ring_lag : 0;
 
   // Pre-reserve next frame capacity. std::move leaves capacity 0,
   // causing geometric growth (~5-10 MB churn/frame without this).
@@ -11211,7 +11221,13 @@ MTLD3D9Device::refreshSignaledAndTrimRings() {
   uint64_t signalled = m_cachedSignaled.load(std::memory_order_acquire);
   m_constRing.free_blocks(signalled);
   m_uploadRing.free_blocks(signalled);
-  m_constRingResolve.free_blocks(signalled);
+  {
+    static const uint64_t diag_ring_lag = [] {
+      auto v = env::getEnvVar("DXMT_D9_RING_LAG");
+      return v.empty() ? 0ull : std::strtoull(v.c_str(), nullptr, 10);
+    }();
+    m_constRingResolve.free_blocks(signalled > diag_ring_lag ? signalled - diag_ring_lag : 0);
+  }
 }
 
 // Shared fan-list buffer [0,1,2, 0,2,3, ...] up to kFanListPrimCap.
